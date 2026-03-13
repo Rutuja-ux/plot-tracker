@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Plot Land Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;min-height:100vh;max-width:480px;margin:0 auto;}
+
+.header{background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:52px 16px 16px;position:sticky;top:0;z-index:50;box-shadow:0 2px 20px rgba(0,0,0,.3);}
+.header-row{display:flex;justify-content:space-between;align-items:center;}
+.header-sub{color:#93c5fd;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.header-title{color:#fff;font-size:22px;font-weight:900;margin:2px 0 0;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.live-badge{font-size:11px;color:#6ee7b7;font-weight:700;display:flex;align-items:center;}
+.offline-badge{font-size:11px;color:#fca5a5;font-weight:700;}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;}
+.stat{border-radius:18px;padding:14px 16px;color:#fff;}
+.stat-icon{font-size:20px;}
+.stat-val{font-size:30px;font-weight:900;line-height:1;}
+.stat-lbl{font-size:11px;opacity:.8;margin-top:3px;}
+
+.sec-title{font-size:13px;font-weight:700;color:#374151;margin:16px 14px 8px;}
+
+.block-card{background:#fff;border-radius:18px;padding:16px;margin:0 14px 10px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;border:none;width:calc(100% - 28px);text-align:left;display:block;transition:transform .15s;}
+.block-card:active{transform:scale(.98);}
+.bc-row{display:flex;justify-content:space-between;align-items:center;}
+.bc-name{font-size:15px;font-weight:800;color:#1e293b;}
+.bc-meta{font-size:11px;color:#64748b;margin-top:3px;}
+.bc-right{display:flex;align-items:center;gap:10px;}
+.bc-arrow{font-size:22px;color:#93c5fd;font-weight:300;}
+.bc-del{background:#fff5f5;border:1.5px solid #fecaca;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:#ef4444;cursor:pointer;}
+.prog{margin-top:10px;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:999px;}
+.prog-lbl{font-size:10px;color:#94a3b8;margin-top:3px;}
+
+.add-block-btn{background:#f8fafc;border:2px dashed #cbd5e1;border-radius:18px;padding:16px;margin:0 14px 80px;cursor:pointer;width:calc(100% - 28px);text-align:center;display:block;}
+.add-block-btn p:first-child{font-size:22px;}
+.add-block-btn p:last-child{font-size:12px;font-weight:700;color:#94a3b8;margin-top:4px;}
+
+.plots-hdr{background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:52px 16px 14px;position:sticky;top:0;z-index:50;box-shadow:0 2px 20px rgba(0,0,0,.3);}
+.back-btn{background:rgba(255,255,255,.15);border:none;border-radius:10px;padding:6px 14px;color:#fff;font-size:13px;cursor:pointer;margin-bottom:8px;font-weight:600;}
+.phdr-row{display:flex;justify-content:space-between;align-items:center;}
+.plots-title{color:#fff;font-size:18px;font-weight:900;}
+.search-box{width:100%;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.25);border-radius:12px;padding:9px 14px;color:#fff;font-size:13px;outline:none;margin-top:10px;}
+.search-box::placeholder{color:rgba(255,255,255,.5);}
+
+.filters{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;scrollbar-width:none;}
+.filters::-webkit-scrollbar{display:none;}
+.fpill{flex-shrink:0;padding:6px 16px;border-radius:999px;font-size:12px;font-weight:700;border:1.5px solid;cursor:pointer;transition:all .2s;}
+.fpill.on{background:#1e3a5f;color:#fff;border-color:#1e3a5f;}
+.fpill.off{background:#fff;color:#64748b;border-color:#e2e8f0;}
+
+.plot-list{padding:0 14px 90px;display:flex;flex-direction:column;gap:10px;}
+.pcard{border-radius:18px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1.5px solid transparent;}
+.pcard.s-available{background:#fff;}
+.pcard.s-booked{background:#fff5f5;border-color:#fecaca;}
+.pcard.s-reserved{background:#fffbeb;border-color:#fde68a;}
+.pcard.s-sold{background:#f8fafc;border-color:#e2e8f0;}
+.pc-row{display:flex;justify-content:space-between;align-items:flex-start;}
+.pc-no{font-size:16px;font-weight:800;color:#1e293b;}
+.pc-dim{font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px;}
+.pc-area{font-size:13px;font-weight:700;color:#374151;margin-top:5px;}
+.pc-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;}
+.badge-dot{width:6px;height:6px;border-radius:50%;}
+.ba{background:#d1fae5;color:#065f46;border-color:#6ee7b7;} .da{background:#10b981;}
+.bb{background:#fee2e2;color:#991b1b;border-color:#fca5a5;} .db{background:#ef4444;}
+.br{background:#fef3c7;color:#92400e;border-color:#fde68a;} .dr{background:#f59e0b;}
+.bs{background:#e2e8f0;color:#334155;border-color:#cbd5e1;} .ds{background:#94a3b8;}
+.pay-paid{background:#dbeafe;color:#1e40af;border-color:#93c5fd;font-size:10px;padding:3px 8px;border-radius:999px;font-weight:700;border:1px solid;display:inline-block;margin-top:4px;}
+.pay-partial{background:#fef3c7;color:#92400e;border-color:#fde68a;font-size:10px;padding:3px 8px;border-radius:999px;font-weight:700;border:1px solid;display:inline-block;margin-top:4px;}
+.pay-unpaid{background:#fee2e2;color:#991b1b;border-color:#fca5a5;font-size:10px;padding:3px 8px;border-radius:999px;font-weight:700;border:1px solid;display:inline-block;margin-top:4px;}
+.pay-na{display:none;}
+.cust-row{display:flex;align-items:center;gap:6px;margin-top:8px;}
+.cust-name{font-size:12px;font-weight:600;color:#374151;}
+.edit-btn{margin-top:10px;width:100%;padding:9px;border-radius:12px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:700;cursor:pointer;}
+.empty{text-align:center;color:#94a3b8;padding:50px 0;font-size:13px;}
+
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:68px;background:#fff;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-around;padding-bottom:8px;z-index:50;}
+.nbtn{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 10px;}
+.nbtn span:first-child{font-size:20px;}
+.nlbl{font-size:10px;font-weight:700;}
+.nlbl.on{color:#2563eb;} .nlbl.off{color:#94a3b8;}
+.nadd{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#2563eb);display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.4);}
+
+/* MODAL — key fix: no re-render on input, use native form */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;}
+.modal{background:#fff;border-radius:28px 28px 0 0;width:100%;max-width:480px;max-height:93vh;overflow-y:auto;}
+.mhandle{width:40px;height:4px;background:#e2e8f0;border-radius:999px;margin:14px auto 0;}
+.mhdr-sub{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.7;}
+.mhdr-title{font-size:18px;font-weight:900;margin-top:3px;}
+.mbody{padding:20px;}
+.flbl{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;}
+.finput{width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 14px;font-size:16px;outline:none;color:#1e293b;transition:border .2s;font-family:inherit;-webkit-appearance:none;}
+.finput:focus{border-color:#2563eb;background:#fff;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.fg{margin-bottom:16px;}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sopt{padding:11px;border-radius:12px;font-size:13px;font-weight:700;border:2px solid #e2e8f0;cursor:pointer;text-align:center;background:#fff;color:#64748b;transition:all .2s;}
+.sopt.sel-a{background:#d1fae5;color:#065f46;border-color:#6ee7b7;}
+.sopt.sel-b{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
+.sopt.sel-r{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+.sopt.sel-s{background:#e2e8f0;color:#334155;border-color:#cbd5e1;}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:0;}
+.popt{padding:10px;border-radius:12px;font-size:12px;font-weight:700;border:2px solid #e2e8f0;cursor:pointer;text-align:center;background:#fff;color:#64748b;transition:all .2s;}
+.popt.sel-paid{background:#dbeafe;color:#1e40af;border-color:#93c5fd;}
+.popt.sel-partial{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+.popt.sel-unpaid{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
+.popt.sel-na{background:#f1f5f9;color:#64748b;border-color:#cbd5e1;}
+.mfooter{padding:12px 20px 34px;display:flex;flex-direction:column;gap:8px;}
+.bsave{padding:15px;border-radius:14px;border:none;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1e3a5f,#2563eb);cursor:pointer;width:100%;}
+.brow{display:flex;gap:8px;}
+.bcancel{flex:1;padding:13px;border-radius:12px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;}
+.bdel{flex:1;padding:13px;border-radius:12px;border:1.5px solid #fecaca;background:#fff5f5;color:#ef4444;font-size:13px;font-weight:700;cursor:pointer;}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:11px 22px;border-radius:999px;font-size:13px;font-weight:700;color:#fff;z-index:300;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:fadeup .3s ease;}
+@keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.tg{background:linear-gradient(135deg,#065f46,#10b981);}
+.tr{background:linear-gradient(135deg,#991b1b,#ef4444);}
+
+.loader{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:14px;}
+.spin{width:38px;height:38px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const BIN_ID  = "699ef863ae596e708f48afdd";
+const API_KEY = "$2a$10$E9VRrlS34ke0Isiu982WP.kInUGRXxGuADxCHf/SjtsnmzFetthQy";
+const JURL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const JHDRS   = {"Content-Type":"application/json","X-Master-Key":API_KEY,"X-Bin-Meta":"false"};
+
+function makePlots(n){
+  return Array.from({length:n},(_,i)=>({id:i+1,plot:String(i+1),dim:"",area:"",status:"Available",customer:"",payment:"N/A",notes:""}));
+}
+
+const DEFAULT={blocks:[
+  {id:"Block_E",name:"Block E",plots:makePlots(15)},
+  {id:"Block_F",name:"Block F",plots:makePlots(13)},
+  {id:"Block_G",name:"Block G",plots:makePlots(12)},
+  {id:"Block_H",name:"Block H",plots:makePlots(24)},
+  {id:"Block_I",name:"Block I",plots:makePlots(8)},
+  {id:"Block_J",name:"Block J",plots:makePlots(11)},
+  {id:"Block_K",name:"Block K",plots:makePlots(13)},
+]};
+
+let S={data:null,view:"home",block:"Block_E",search:"",filter:"All",modal:null,online:false,saving:false,toast:null,tTimer:null};
+
+// ── JSONBIN ──
+async function fbGet(){
+  try{
+    const r=await fetch(JURL+"/latest",{headers:JHDRS});
+    if(!r.ok)throw 0;
+    const d=await r.json();
+    if(d&&d.blocks){if(!S.modal){S.data=d;}S.online=true;}
+    else{await fbSet(JSON.parse(JSON.stringify(DEFAULT)));}
+  }catch{S.online=false;if(!S.data)S.data=JSON.parse(JSON.stringify(DEFAULT));}
+  render();
+}
+async function fbSet(d){
+  S.saving=true;render();
+  try{
+    const r=await fetch(JURL,{method:"PUT",headers:JHDRS,body:JSON.stringify(d)});
+    if(!r.ok)throw 0;
+    S.data=d;S.online=true;toast("✅ Saved!","g");
+  }catch{S.online=false;toast("⚠️ Offline","r");}
+  S.saving=false;render();
+}
+
+// ── HELPERS ──
+function toast(msg,t="g"){if(S.tTimer)clearTimeout(S.tTimer);S.toast={msg,t};render();S.tTimer=setTimeout(()=>{S.toast=null;render();},2500);}
+function sClass(s){return{Available:"ba",Booked:"bb",Reserved:"br",Sold:"bs"}[s]||"ba";}
+function dClass(s){return{Available:"da",Booked:"db",Reserved:"dr",Sold:"ds"}[s]||"da";}
+function cClass(s){return{Available:"s-available",Booked:"s-booked",Reserved:"s-reserved",Sold:"s-sold"}[s]||"s-available";}
+function payClass(p){return{Paid:"pay-paid",Partial:"pay-partial",Unpaid:"pay-unpaid","N/A":"pay-na"}[p]||"pay-na";}
+function payLabel(p){return{Paid:"💳 Paid",Partial:"⏳ Partial","Unpaid":"❌ Unpaid","N/A":""}[p]||"";}
+function stats(){
+  const all=S.data.blocks.flatMap(b=>b.plots);
+  return{total:all.length,Available:all.filter(p=>p.status==="Available").length,Booked:all.filter(p=>p.status==="Booked").length,Reserved:all.filter(p=>p.status==="Reserved").length};
+}
+
+// ── KEY FIX: Read form values directly from DOM (no re-render on typing) ──
+function getFormValues(){
+  const f={};
+  const fields=["plot","area","dim","customer","notes","blockName","plotCount"];
+  fields.forEach(id=>{
+    const el=document.getElementById("f_"+id);
+    if(el) f[id]=el.value;
+  });
+  // status and payment come from S.modal directly (set by button clicks)
+  if(S.modal){
+    f.status=S.modal.status||"Available";
+    f.payment=S.modal.payment||"N/A";
+  }
+  return f;
+}
+
+function setStatus(s){
+  if(S.modal){S.modal.status=s;}
+  // just re-render the status buttons only
+  document.querySelectorAll(".sopt").forEach(b=>{
+    const v=b.getAttribute("data-val");
+    b.className="sopt"+(v===s?" sel-"+{Available:"a",Booked:"b",Reserved:"r",Sold:"s"}[v]:"");
+  });
+}
+function setPayment(p){
+  if(S.modal){S.modal.payment=p;}
+  document.querySelectorAll(".popt").forEach(b=>{
+    const v=b.getAttribute("data-val");
+    b.className="popt"+(v===p?" sel-"+{Paid:"paid",Partial:"partial",Unpaid:"unpaid","N/A":"na"}[v]:"");
+  });
+}
+
+// ── RENDER ──
+function render(){
+  const app=document.getElementById("app");
+  if(!S.data){app.innerHTML=`<div class="loader"><div class="spin"></div><p style="color:#64748b;font-size:13px">Loading tracker…</p></div>`;return;}
+  const st=stats();
+  const cb=S.data.blocks.find(b=>b.id===S.block);
+  const fp=(cb?.plots||[]).filter(p=>{
+    const ms=S.filter==="All"||p.status===S.filter;
+    const mq=!S.search||p.plot.toLowerCase().includes(S.search.toLowerCase())||(p.customer||"").toLowerCase().includes(S.search.toLowerCase());
+    return ms&&mq;
+  });
+
+  const liveBadge=S.saving
+    ?`<span class="offline-badge">⟳ Saving…</span>`
+    :S.online
+    ?`<span class="live-badge"><span class="live-dot"></span>Live</span>`
+    :`<span class="offline-badge">⚠ Offline</span>`;
+
+  let h="";
+
+  // HOME
+  if(S.view==="home"){
+    h+=`<div class="header"><div class="header-row"><div><p class="header-sub">Real Estate</p><h1 class="header-title">Plot Tracker</h1></div>${liveBadge}</div></div>`;
+    h+=`<div class="stats">
+      <div class="stat" style="background:linear-gradient(135deg,#1e40af,#3b82f6)"><div class="stat-icon">📋</div><div class="stat-val">${st.total}</div><div class="stat-lbl">Total Plots</div></div>
+      <div class="stat" style="background:linear-gradient(135deg,#065f46,#10b981)"><div class="stat-icon">✅</div><div class="stat-val">${st.Available}</div><div class="stat-lbl">Available</div></div>
+      <div class="stat" style="background:linear-gradient(135deg,#991b1b,#ef4444)"><div class="stat-icon">🔴</div><div class="stat-val">${st.Booked}</div><div class="stat-lbl">Booked</div></div>
+      <div class="stat" style="background:linear-gradient(135deg,#92400e,#f59e0b)"><div class="stat-icon">🟡</div><div class="stat-val">${st.Reserved}</div><div class="stat-lbl">Reserved</div></div>
+    </div>`;
+    h+=`<p class="sec-title">📍 Blocks</p>`;
+    S.data.blocks.forEach(b=>{
+      const av=b.plots.filter(p=>p.status==="Available").length;
+      const bk=b.plots.filter(p=>p.status==="Booked").length;
+      const pct=b.plots.length?Math.round(av/b.plots.length*100):0;
+      h+=`<button class="block-card" onclick="openBlock('${b.id}')">
+        <div class="bc-row">
+          <div><p class="bc-name">${b.name}</p><p class="bc-meta">${b.plots.length} plots · ${av} available · ${bk} booked</p></div>
+          <div class="bc-right">
+            <button class="bc-del" onclick="event.stopPropagation();confirmDelBlock('${b.id}','${b.name}')">🗑 Delete</button>
+            <span class="bc-arrow">›</span>
+          </div>
+        </div>
+        <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
+        <p class="prog-lbl">${pct}% available</p>
+      </button>`;
+    });
+    h+=`<button class="add-block-btn" onclick="openAddBlock()"><p>＋</p><p>Add New Block</p></button>`;
+  }
+
+  // PLOTS
+  if(S.view==="plots"&&cb){
+    h+=`<div class="plots-hdr">
+      <button class="back-btn" onclick="goHome()">‹ Back</button>
+      <div class="phdr-row"><h2 class="plots-title">${cb.name}</h2>${liveBadge}</div>
+      <input class="search-box" placeholder="🔍  Search plot or customer…" value="${S.search}" oninput="onSearch(this.value)"/>
+    </div>`;
+    h+=`<div class="filters">${["All","Available","Booked","Reserved","Sold"].map(f=>`<button class="fpill ${S.filter===f?"on":"off"}" onclick="setFilter('${f}')">${f}</button>`).join("")}</div>`;
+    h+=`<div class="plot-list">`;
+    if(!fp.length){h+=`<div class="empty">No plots found.</div>`;}
+    else fp.forEach(p=>{
+      const ri=cb.plots.indexOf(p);
+      const pl=payLabel(p.payment||"N/A");
+      const pc=payClass(p.payment||"N/A");
+      h+=`<div class="pcard ${cClass(p.status)}">
+        <div class="pc-row">
+          <div>
+            <p class="pc-no">Plot ${p.plot}</p>
+            <p class="pc-dim">${p.dim||"—"}</p>
+            <p class="pc-area">${p.area||"—"} sq.m</p>
+          </div>
+          <div class="pc-right">
+            <span class="badge ${sClass(p.status)}"><span class="badge-dot ${dClass(p.status)}"></span>${p.status}</span>
+            ${pl?`<span class="${pc}">${pl}</span>`:""}
+          </div>
+        </div>
+        ${p.customer?`<div class="cust-row"><span>👤</span><span class="cust-name">${p.customer}</span></div>`:""}
+        ${p.notes?`<div style="margin-top:6px;font-size:11px;color:#64748b;font-style:italic;">📝 ${p.notes}</div>`:""}
+        <button class="edit-btn" onclick="openEdit('${cb.id}',${ri})">✏️ Edit Plot</button>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+
+  // BOTTOM NAV
+  h+=`<div class="bnav">
+    <button class="nbtn" onclick="goHome()"><span>🏠</span><span class="nlbl ${S.view==="home"?"on":"off"}">Home</span></button>
+    <button class="nbtn" onclick="goPlots()"><span>📋</span><span class="nlbl ${S.view==="plots"?"on":"off"}">Plots</span></button>
+    <button class="nadd" onclick="openAddPlot()">＋</button>
+    <button class="nbtn" onclick="focusSearch()"><span>🔍</span><span class="nlbl off">Search</span></button>
+    <button class="nbtn" onclick="openAddBlock()"><span>🏘</span><span class="nlbl off">Block</span></button>
+  </div>`;
+
+  // MODAL
+  if(S.modal){
+    const m=S.modal;
+    let mh="",mb="",mf="";
+    const curStatus=m.status||"Available";
+    const curPay=m.payment||"N/A";
+
+    if(m.type==="edit"||m.type==="add"){
+      const isE=m.type==="edit";
+      const bname=S.data.blocks.find(x=>x.id===m.blockId)?.name||"";
+      mh=`<div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:0 20px 16px;">
+        <div class="mhandle" style="background:rgba(255,255,255,.3)"></div>
+        <p class="mhdr-sub" style="color:#93c5fd;margin-top:12px">${isE?"Edit Plot":"Add New Plot"}</p>
+        <p class="mhdr-title" style="color:#fff">${isE?`${bname} — Plot ${m.plotNo||""}`:bname}</p>
+      </div>`;
+      mb=`<div class="mbody">
+        <div class="g2">
+          <div><label class="flbl">Plot No.</label><input id="f_plot" class="finput" value="${m.plotNo||""}" placeholder="e.g. 1"/></div>
+          <div><label class="flbl">Area (sq.m)</label><input id="f_area" class="finput" value="${m.areaVal||""}" placeholder="e.g. 200"/></div>
+        </div>
+        <div class="fg"><label class="flbl">Dimensions (m)</label><input id="f_dim" class="finput" value="${m.dim||""}" placeholder="e.g. 12.50 x 20.00"/></div>
+        <div class="fg">
+          <label class="flbl">Status</label>
+          <div class="sgrid">
+            ${["Available","Booked","Reserved","Sold"].map(s=>{
+              const sel=s===curStatus?" sel-"+{Available:"a",Booked:"b",Reserved:"r",Sold:"s"}[s]:"";
+              return`<button class="sopt${sel}" data-val="${s}" onclick="setStatus('${s}')">${s}</button>`;
+            }).join("")}
+          </div>
+        </div>
+        <div class="fg">
+          <label class="flbl">Customer Name</label>
+          <input id="f_customer" class="finput" value="${m.customer||""}" placeholder="Enter customer name…" autocomplete="off" autocorrect="off" autocapitalize="words"/>
+        </div>
+        <div class="fg">
+          <label class="flbl">Payment Status</label>
+          <div class="pgrid">
+            ${["Paid","Partial","Unpaid","N/A"].map(p=>{
+              const sel=p===curPay?" sel-"+{Paid:"paid",Partial:"partial",Unpaid:"unpaid","N/A":"na"}[p]:"";
+              return`<button class="popt${sel}" data-val="${p}" onclick="setPayment('${p}')">${{Paid:"💳 Paid",Partial:"⏳ Partial",Unpaid:"❌ Unpaid","N/A":"➖ N/A"}[p]}</button>`;
+            }).join("")}
+          </div>
+        </div>
+        <div class="fg"><label class="flbl">Notes (optional)</label><input id="f_notes" class="finput" value="${m.notes||""}" placeholder="Any notes…"/></div>
+      </div>`;
+      mf=`<div class="mfooter">
+        <button class="bsave" onclick="saveModal()">💾 Save Changes</button>
+        <div class="brow">
+          <button class="bcancel" onclick="closeModal()">Cancel</button>
+          ${isE?`<button class="bdel" onclick="delPlot()">🗑 Delete</button>`:""}
+        </div>
+      </div>`;
+    }
+
+    if(m.type==="addBlock"){
+      mh=`<div style="background:linear-gradient(135deg,#4c1d95,#7c3aed);padding:0 20px 16px;">
+        <div class="mhandle" style="background:rgba(255,255,255,.3)"></div>
+        <p class="mhdr-sub" style="color:#c4b5fd;margin-top:12px">New Block</p>
+        <p class="mhdr-title" style="color:#fff">Add Block</p>
+      </div>`;
+      mb=`<div class="mbody">
+        <div class="fg"><label class="flbl">Block Name</label><input id="f_blockName" class="finput" value="" placeholder="e.g. Block A, Phase 2…" autocomplete="off"/></div>
+        <div class="fg"><label class="flbl">Number of Plots</label><input id="f_plotCount" class="finput" type="number" min="1" value="" placeholder="e.g. 10"/></div>
+      </div>`;
+      mf=`<div class="mfooter">
+        <button class="bsave" style="background:linear-gradient(135deg,#4c1d95,#7c3aed)" onclick="saveModal()">Add Block</button>
+        <div class="brow"><button class="bcancel" onclick="closeModal()">Cancel</button></div>
+      </div>`;
+    }
+
+    if(m.type==="delBlock"){
+      mh=`<div style="background:linear-gradient(135deg,#7f1d1d,#ef4444);padding:0 20px 16px;">
+        <div class="mhandle" style="background:rgba(255,255,255,.3)"></div>
+        <p class="mhdr-sub" style="color:#fca5a5;margin-top:12px">Delete Block</p>
+        <p class="mhdr-title" style="color:#fff">Delete "${m.blockName}"?</p>
+      </div>`;
+      mb=`<div class="mbody">
+        <p style="font-size:14px;color:#374151;line-height:1.6;">This will permanently delete <strong>${m.blockName}</strong> and all its plots. This cannot be undone.</p>
+        <div style="margin-top:14px;background:#fff5f5;border:1.5px solid #fecaca;border-radius:12px;padding:12px;">
+          <p style="font-size:12px;color:#991b1b;font-weight:700;">⚠️ Are you absolutely sure?</p>
+        </div>
+      </div>`;
+      mf=`<div class="mfooter">
+        <button class="bsave" style="background:linear-gradient(135deg,#991b1b,#ef4444)" onclick="execDelBlock()">🗑 Yes, Delete Block</button>
+        <div class="brow"><button class="bcancel" onclick="closeModal()">Cancel — Keep Block</button></div>
+      </div>`;
+    }
+
+    h+=`<div class="overlay" onclick="ovClose(event)"><div class="modal" onclick="event.stopPropagation()">${mh}${mb}${mf}</div></div>`;
+  }
+
+  if(S.toast) h+=`<div class="toast t${S.toast.t}">${S.toast.msg}</div>`;
+  app.innerHTML=h;
+}
+
+// ── ACTIONS ──
+function goHome(){S.view="home";S.modal=null;render();}
+function goPlots(){S.view="plots";render();}
+function openBlock(id){S.block=id;S.view="plots";S.search="";S.filter="All";render();}
+function onSearch(v){S.search=v;render();}
+function setFilter(f){S.filter=f;render();}
+function closeModal(){S.modal=null;render();}
+function ovClose(e){if(e.target===e.currentTarget)closeModal();}
+function focusSearch(){S.view="plots";render();setTimeout(()=>document.querySelector(".search-box")?.focus(),100);}
+
+function openEdit(bid,ri){
+  const b=S.data.blocks.find(x=>x.id===bid);
+  const p=b?.plots[ri];
+  if(!p)return;
+  S.modal={type:"edit",blockId:bid,plotIdx:ri,status:p.status||"Available",payment:p.payment||"N/A",
+    plotNo:p.plot,areaVal:p.area,dim:p.dim,customer:p.customer,notes:p.notes};
+  render();
+}
+function openAddPlot(){
+  S.modal={type:"add",blockId:S.block,status:"Available",payment:"N/A"};
+  if(S.view!=="plots")S.view="plots";
+  render();
+}
+function openAddBlock(){S.modal={type:"addBlock"};render();}
+function confirmDelBlock(id,name){S.modal={type:"delBlock",blockId:id,blockName:name};render();}
+
+function execDelBlock(){
+  const nb=JSON.parse(JSON.stringify(S.data));
+  nb.blocks=nb.blocks.filter(b=>b.id!==S.modal.blockId);
+  if(S.block===S.modal.blockId)S.block=nb.blocks[0]?.id||"";
+  S.view="home";S.modal=null;
+  fbSet(nb);
+}
+
+function delPlot(){
+  const nb=JSON.parse(JSON.stringify(S.data));
+  const b=nb.blocks.find(x=>x.id===S.modal.blockId);
+  b.plots.splice(S.modal.plotIdx,1);
+  S.modal=null;
+  fbSet(nb);
+}
+
+function saveModal(){
+  const m=S.modal;
+  const f=getFormValues();
+  const nb=JSON.parse(JSON.stringify(S.data));
+
+  if(m.type==="edit"){
+    const b=nb.blocks.find(x=>x.id===m.blockId);
+    b.plots[m.plotIdx]={
+      ...b.plots[m.plotIdx],
+      plot:f.plot||b.plots[m.plotIdx].plot,
+      area:f.area||"",dim:f.dim||"",
+      customer:f.customer||"",notes:f.notes||"",
+      status:m.status||"Available",
+      payment:m.payment||"N/A"
+    };
+  } else if(m.type==="add"){
+    const b=nb.blocks.find(x=>x.id===m.blockId);
+    if(!f.plot?.trim()){toast("Enter a plot number","r");return;}
+    b.plots.push({id:Date.now(),plot:f.plot,area:f.area||"",dim:f.dim||"",
+      customer:f.customer||"",notes:f.notes||"",status:m.status||"Available",payment:m.payment||"N/A"});
+  } else if(m.type==="addBlock"){
+    if(!f.blockName?.trim()){toast("Enter a block name","r");return;}
+    const count=parseInt(f.plotCount)||0;
+    const id="B_"+Date.now();
+    nb.blocks.push({id,name:f.blockName.trim(),plots:count>0?makePlots(count):[]});
+    S.block=id;S.view="plots";
+  }
+  S.modal=null;
+  fbSet(nb);
+}
+
+// ── INIT ──
+async function init(){
+  try{
+    const r=await fetch(JURL+"/latest",{headers:JHDRS});
+    if(!r.ok)throw 0;
+    const d=await r.json();
+    if(!d||!d.blocks||d.blocks.length===0){await fbSet(JSON.parse(JSON.stringify(DEFAULT)));}
+    else{S.data=d;S.online=true;render();}
+  }catch{S.online=false;S.data=JSON.parse(JSON.stringify(DEFAULT));render();}
+  setInterval(()=>{if(!S.modal)fbGet();},10000);
+}
+init();
+</script>
+</body>
+</html>
